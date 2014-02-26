@@ -6,6 +6,7 @@ var _ = require("underscore");
 var async = require("async");
 var colors = require("colors");
 var ProgressBar = require("progress");
+var sizeOf = require("image-size");
 var argv = require("optimist").boolean(['j']).argv;
 
 _fetchImages = function(images) {
@@ -16,53 +17,68 @@ _fetchImages = function(images) {
 		complete: '#'
 	});
 
-	var results = [];
-
 	function onResultsChanged() {
 		bar.tick();
 	}
 
 	var count = 0;
+	var results = [];
 	async.eachLimit(images, 5, function(img, callback) {
-			function finish(result) {
-				return function() {
-					results[index] = result;
-					onResultsChanged();
-					setTimeout(function() {
-						callback(null);
-					}, 1000);
-				};
-			}
-
-			if (!img.imageUrl) {
-				return finish("fail")();
-			}
-
 			var index = count++;
 			var dest = "images/image" + index;
+
+			function complete() {
+				onResultsChanged();
+				setTimeout(function() {
+					callback(null);
+				}, 1000);
+			}
+
+			function fail() {
+				//console.log("#" + index, "fail");
+				results[index] = null;
+				complete();
+			}
+
+			function success() {
+				//console.log("#" + index, "success");
+				results[index] = {
+					id: index,
+					path: dest,
+					dimensions: sizeOf(dest)
+				};
+				complete();
+			}
+
 			request({
 				url: img.imageUrl,
 				headers: {
 					'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36"
 				}
 			}).pipe(fs.createWriteStream(dest))
-				.on('error', finish("fail"))
-				.on('finish', finish("success"));
+				.on('error', fail)
+				.on('finish', success);
 		},
 		function(err) {
-			var failedImages = _.reduce(results, function(count, result) {
-				if (result === "fail") {
-					count++;
+			var successfulResults = _.filter(results, function(result) {
+				return result;
+			});
+			var failedImages = images.length - successfulResults.length;
+			console.log("fetching images is done, ".green + (failedImages + " failed.").red);
+			var json = JSON.stringify(successfulResults);
+			fs.writeFile("data.json", json, function(err) {
+				if (err) {
+					throw err;
 				}
 
-				return count;
-			}, 0);
-			console.log("fetching images is done, ".green + (failedImages + " failed.").red);
-			process.exit(0);
+				console.log("data fetched".green);
+				process.exit(0);
+			});
 		});
 };
 
-var length = argv._.length > 0 ? argv._[0] : 600;
+var DEFAULT_LENGTH = 50;
+var length = argv._.length > 0 ? argv._[0] : DEFAULT_LENGTH;
 var onlyJSON = argv.j;
 var URL = "http://image.baidu.com/channel/imgs?c=动漫&t=全部&fr=channel&rn=" + length;
 request(URL)
@@ -92,6 +108,7 @@ request(URL)
 				}
 			}
 
+			images = images.slice(0, images.length - 1);
 			_fetchImages(images);
 		});
 	});

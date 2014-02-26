@@ -1,4 +1,7 @@
 node_modules
 bower_components
+
+#face data files
 images.json
+data.json
 images

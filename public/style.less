@@ -1,0 +1,30 @@
+@import "normalize.less";
+@import "variables.less";
+@import "mixins.less";
+
+body {
+	background: url(bg.gif) left top repeat transparent;
+}
+
+@wrapper-width: 960px;
+@wrapper-gutter: 15px;
+@wrapper-item-count: 5;
+@wrapper-item-width: (@wrapper-width - @wrapper-gutter * (@wrapper-item-count - 1)) / @wrapper-item-count;
+.wrapper {
+	.center-block();
+	width: @wrapper-width;
+
+	.item {
+		box-sizing: border-box;
+		width: @wrapper-item-width;
+		margin-left: @wrapper-gutter;
+
+		&.left {
+			margin-left: 0px;	
+		}
+
+		.img {
+			display: block;
+		}
+	}
+}
