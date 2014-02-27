@@ -5,5 +5,8 @@ require.config({
 	}
 });
 
-require(['jquery', 'underscore', 'api'], function($, _, api) {
+require(['jquery', 'underscore', 'api', 'viewport'], function($, _, api, ViewPort) {
+	$(function() {
+		var viewport = new ViewPort($(".wrapper")[0]);
+	});
 });
