@@ -1,4 +1,4 @@
 imageflow
 =========
 
-Try to complete my team limijiaoyin's web engineer practise.
+Just a web developer's practise for my team limijiaoyin.
