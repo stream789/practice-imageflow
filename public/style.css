@@ -186,15 +186,17 @@ body {
   margin-left: auto;
   margin-right: auto;
   width: 960px;
+  position: relative;
 }
-.wrapper .item {
-  box-sizing: border-box;
+.wrapper .cell {
   width: 180px;
   margin-left: 15px;
+  position: absolute;
+  box-sizing: border-box;
 }
-.wrapper .item.left {
+.wrapper .cell.left {
   margin-left: 0px;
 }
-.wrapper .item .img {
+.wrapper .cell .img {
   display: block;
 }

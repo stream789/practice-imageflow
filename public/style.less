@@ -13,11 +13,13 @@ body {
 .wrapper {
 	.center-block();
 	width: @wrapper-width;
+	position: relative;
 
-	.item {
-		box-sizing: border-box;
+	.cell {
 		width: @wrapper-item-width;
 		margin-left: @wrapper-gutter;
+		position: absolute;
+		box-sizing: border-box;
 
 		&.left {
 			margin-left: 0px;	

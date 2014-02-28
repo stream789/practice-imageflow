@@ -3,6 +3,47 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	var CARD_WIDTH = 180;
 	var GUTTER = 15;
 
+	function CellLoader() {
+		this.status = "initialized";
+		this._count = 0;
+	}
+
+	CellLoader.prototype.isLoading = function() {
+		return this.status === CellLoader.LOADING;
+	};
+
+	CellLoader.prototype.loadMore = function(offset) {
+		var self = this;
+		this.status = CellLoader.LOADING;
+
+		var current = this._count;
+		return api.images(offset).then(function(images) {
+			if (current !== self._count) {
+				throw 'task has been cancelled';
+			}
+
+			this.status = CellLoader.SUCCESS;
+			return images;
+		}, function(err) {
+			this.status = CellLoader.FAIL;
+			throw err;
+		});
+	};
+
+	CellLoader.prototype.cancel = function() {
+		if (!this.isLoading()) {
+			return console.error("Status is not loading, ignore!");
+		}
+
+		this._count++;
+		this.status = CellLoader.INITIALIZED;
+	};
+
+	CellLoader.INITIALIZED = "initialized";
+	CellLoader.LOADING = "loading";
+	CellLoader.SUCCESS = "scucess";
+	CellLoader.FAIL = "fail";
+
 	function CellView = function(cell) {
 		this.cell = cell;
 		this.el = $(CellView.template({
@@ -22,6 +63,15 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		this.image = image;
 		var d = image.dimension;
 		this.height = d.width / CARD_WIDTH * d.height;
+	}
+
+	Cell.prototype.position = function(x, y) {
+		this.x = x;
+		this.y = y;
+	};
+
+	Cell.prototype.bottom = function() {
+		return this.y + this.height;
 	}
 
 	Cell.prototype.column = function() {
@@ -53,34 +103,11 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		};
 	}
 
-	function _getViewsRange() {
-		var bottom = _.reduce(_.map(this.visibleCells, function(cell) {
-			return cell.y + cell.height;
-		}), Math.min, 0);
-
-
-		var top = _.reduce(_.map(this.visibleCells, function(cell) {
-			return cell.y;
-		}), Math.max, 0) + 1;
-
-		return {
-			top: top,
-			bottom: bottom
-		};
-	}
-
-	function _getFrameRange() {
-		return {
-			top: this.el.offsetHeight,
-			bottom: this.el.offsetHeight + this.el.height
-		};
-	}
-
 	function _isFullfilled() {
-		var viewsRange = _getViewsRange.call(this);
-		var frameRange = _getFrameRange.call(this);
-		return viewRange.top <= frameRange.top &&
-			frameRange.bottom < viewsRange.bottom;
+		var cellsRange = this._getVisibleCellsRange();
+		var frameRange = this._getFrameRange();
+		return cellsRange.top <= frameRange.top &&
+			frameRange.bottom < cellsRange.bottom;
 	}
 
 	function ViewPort(el) {
@@ -89,10 +116,9 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		this.cells = [];
 		this.visibleCells = [];
 		this.cellViews = [];
-		this.columns = new Array(COLUMNS);
-		for (var i = 0; i < COLUMNS; i++) {
-			this.columns[i] = [];
-		}
+		
+		window.onscroll = _.bind(this.ensureViews, this);
+		window.onresize = _.bind(this.ensureViews, this);
 	}
 
 	function _getVisibleCellsOfColumn(col) {
@@ -107,10 +133,21 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		});
 	}
 
-
 	function _getLastVisibleCellOfColumn(col) {
 		return _.reduce(_getVisibleCellsOfColumn.call(this, col), function(memo, cell) {
-			return memo.y < cell.y ? memo : cell;
+			return memo.y > cell.y ? memo : cell;
+		});
+	}
+
+	function _getCellsOfColumn(col) {
+		return _.filter(this.cells, function(cell) {
+			return col === cell.column();
+		});
+	}
+
+	function _getLastCellOfColumn(col) {
+		return _.reduce(_getLastCellOfColumn.call(this, col), function(memo, cell) {
+			return memo.y > cell.y ? memo : cell;
 		});
 	}
 
@@ -135,7 +172,7 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	function _needLoadMoreCells() {
 		for (var i = 0; i < COLUMNS; i++) {
 			var cell = _getLastVisibleCellOfColumn.call(this, i);
-			if (cell.bottom === this.el.scrollHeight) {
+			if (cell.bottom() === this.el.scrollHeight) {
 				return true;
 			}
 		}
@@ -143,21 +180,58 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		return false;
 	}
 
+	function _addCells = function(images) {
+		var self = this;
+		var cells = _.map(images, function(img) {
+			var cell = new Cell(img);
+
+			var col = _getMinHeightColumn.call(self);
+			var x = col * (CARD_WIDTH + GUTTER);
+			var y = _getLastCellOfColumn(col).bottom() + GUTTER;
+			cell.position(x, y);
+
+			return cell;
+		});
+		this.cells = this.cells.concat(cells);
+	};
+
+	ViewPort.prototype._getFrameRange = function() {
+		return {
+			top: this.el.scrollTop,
+			bottom: this.el.scrollTop + $(window).height()
+		};
+	};
+
+	ViewPort.prototype._getVisibleCellsRange = function() {
+		var bottom = _.reduce(_.map(this.visibleCells, function(cell) {
+			return cell.y + cell.height;
+		}), Math.min, 0);
+
+
+		var top = _.reduce(_.map(this.visibleCells, function(cell) {
+			return cell.y;
+		}), Math.max, 0) + 1;
+
+		return {
+			top: top,
+			bottom: bottom
+		};
+	};
+
 	ViewPort.prototype.ensureCellViews = function() {
 		if (_isFullfilled.call(this)) {
 			return;
 		}
 
-		var viewsRange = _getViewsRange.call(this);
-		var frameRange = _getFrameRange.call(this);
-		if (viewsRange.top > frame.top) {
+		var cellsRange = this._getVisibleCellsRange();
+		var frameRange = this._getFrameRange();
+		if (cellsRange.top > frame.top) {
 			_.each(_.range(COLUMNS), function(col) {
-				var cells = _getVisibleCellsOfColumn.call(this, col);
+				var cells = _getCellsOfColumn.call(this, col);
 				var cell = _getFirstVisibleCellOfColumn.call(this, col);
-				var index = _.indexOf(cells, cell);
-				var pos = index;
+				var pos = _.indexOf(cells, cell);
 				while (pos >= 0 && cells[pos].y > frame.top) {
-					_addVisibleCell.call(this, cells[pos--])
+					_addVisibleCell.call(this, cells[--pos])
 				}
 			});
 		} else {
@@ -166,17 +240,29 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 				var cell = _getFirstVisibleCellOfColumn.call(this, col);
 				var index = _.indexOf(cells, cell);
 				var pos = index;
-				while (cells[pos].bottom <= frame.top) {
+				while (cells[pos].bottom() <= frame.top) {
 					_remoteVisibleCell.call(this, cells[pos++]);
 				}
 			});
 		}
 
-		if (viewsRange.bottom <= frame.bottom) {
+		// TODO
+		if (cellsRange.bottom <= frame.bottom) {
 			if (_needLoadMoreCells.call(this)) {
+				if (this.loader.isLoading()) {
+					this.loader.cancel();
+				}
 
+				this.loader.loadMore().then(_.bind(_addCells, this));
 			} else {
-
+				_.each(_.range(COLUMNS), function(col) {
+					var cells = _getCellsOfColumn.call(this, col);
+					var cell = _getLastVisibleCellOfColumn.call(this, col);
+					var pos = _.indexOf(cells, cell);
+					while (cells[pos].bottom() <= frame.bottom) {
+						_removeVisibleCell.call(this, cells[++pos]);
+					}
+				});
 			}
 		} else {
 			_.each(_.range(COLUMNS), function(col) {
@@ -184,13 +270,12 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 				var cell = _getLastVisibleCellOfColumn.call(this, col);
 				var index = _.indexOf(cells, cell);
 				var pos = index;
-				while (cells[pos].up > frame.bottom) {
+				while (cells[pos].y > frame.bottom) {
 					_remoteVisibleCell.call(this, cells[pos--]);
 				}
 			});
 		}
 	};
-
 
 	return ViewPort;
 });
