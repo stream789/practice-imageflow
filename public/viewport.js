@@ -116,7 +116,7 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		this.cells = [];
 		this.visibleCells = [];
 		this.cellViews = [];
-		
+
 		window.onscroll = _.bind(this.ensureViews, this);
 		window.onresize = _.bind(this.ensureViews, this);
 	}
