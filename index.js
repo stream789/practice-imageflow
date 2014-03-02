@@ -5,13 +5,15 @@ var express = require("express");
 var colors = require("colors");
 var _ = require("underscore");
 var argv = require("optimist").argv;
-var images = null;
 
 var app = express();
 app.use(express.bodyParser());
+
 app.use(express.static(__dirname + "/public"));
 app.use("/lib", express.static(__dirname + "/bower_components"));
 app.use("/static/images", express.static(__dirname + "/images"));
+
+var images = null;
 
 function ensureData(cb) {
 	if (!images) {
@@ -35,8 +37,8 @@ function ensureData(cb) {
 }
 
 app.get(/^\/images$/, function(req, resp) {
-	var offset = req.query.offset || 0;
-	var length = req.query.length || 10;
+	var offset = parseInt(req.query.offset || "0");
+	var length = parseInt(req.query.length || "10");
 
 	ensureData(function(images) {
 		resp.send({

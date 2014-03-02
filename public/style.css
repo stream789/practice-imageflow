@@ -186,17 +186,20 @@ body {
   margin-left: auto;
   margin-right: auto;
   width: 960px;
+}
+.wrapper .cells {
   position: relative;
 }
-.wrapper .cell {
+.wrapper .cells .cell {
+  background: #fff;
   width: 180px;
   margin-left: 15px;
   position: absolute;
   box-sizing: border-box;
 }
-.wrapper .cell.left {
+.wrapper .cells .cell.left {
   margin-left: 0px;
 }
-.wrapper .cell .img {
+.wrapper .cells .cell .img {
   display: block;
 }

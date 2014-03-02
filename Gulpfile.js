@@ -1,6 +1,7 @@
 var exec = require("child_process").exec;
 var gulp = require("gulp");
 var less = require("gulp-less");
+var nodemon = require("gulp-nodemon");
 
 gulp.task('clean', function(cb) {
 	exec("rm -rf images images.json data.json", function(err, stderr, stdout) {
@@ -21,4 +22,8 @@ gulp.task('watch-less', function() {
 		"bower_components/bootstrap/less/*.less",
 		"public/style.less"
 	], ['less']);
+});
+
+gulp.task('develop', function() {
+	nodemon({script: "index.js", watch: ["index.js"]});
 });

@@ -11,7 +11,9 @@
   "devDependencies": {
     "gulp": "~3.5.2",
     "request": "~2.34.0",
-    "gulp-less": "~1.2.1"
+    "gulp-less": "~1.2.1",
+    "nodemon": "~1.0.15",
+    "gulp-nodemon": "~1.0.0"
   },
   "dependencies": {
     "async": "~0.2.10",
