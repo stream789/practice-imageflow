@@ -109,8 +109,6 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		var frameRange = this._getFrameRange();
 		var result = cellsRange.top <= frameRange.top &&
 			frameRange.bottom < cellsRange.bottom;
-		console.log("cells range", cellsRange, "frameRange", frameRange);
-		console.log("is full filed?", result);
 	}
 
 	function ViewPort(el) {
@@ -241,8 +239,6 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 
 		var cellsRange = this._getVisibleCellsRange();
 		var frameRange = this._getFrameRange();
-		console.log("cells range", cellsRange);
-		console.log("frame range", frameRange);
 
 		if (cellsRange.top >= frameRange.top) {
 			_.each(_.range(COLUMNS), function(col) {
