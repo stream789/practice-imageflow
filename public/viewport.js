@@ -17,7 +17,7 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		this.status = CellLoader.LOADING;
 
 		var current = this._count;
-		return api.images(offset).then(function(images) {
+		return api.slice(offset).then(function(images) {
 			if (current !== self._count) {
 				throw 'task has been cancelled';
 			}
@@ -44,25 +44,32 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	CellLoader.SUCCESS = "scucess";
 	CellLoader.FAIL = "fail";
 
-	function CellView = function(cell) {
+	function CellView(cell) {
 		this.cell = cell;
-		this.el = $(CellView.template({
-			width: CARD_WIDTH,
-			height: cell.height
-			link: cell.image.link
-		}))[0];
+		this.render();
 	};
 
 	CellView.template = _.template("<div class='cell'>" +
-		"<img src='<%-link%>' width='<%-width%>' height='<%-width%>'>" +
+		"<img src='<%-link%>' width='<%-width%>' height='<%-height%>'>" +
 		"</div>");
 	CellView.prototype.onCreate = function() {};
 	CellView.prototype.onDestroy = function() {};
 
+	CellView.prototype.render = function() {
+		var el = this.el = $(CellView.template({
+			width: CARD_WIDTH,
+			height: this.cell.height,
+			link: this.cell.image.path
+		}))[0];
+		this.$el = $(el);
+		this.$el.css("left", this.cell.x + "px");
+		this.$el.css("top", this.cell.y + "px");
+	};
+
 	function Cell(image) {
 		this.image = image;
 		var d = image.dimension;
-		this.height = d.width / CARD_WIDTH * d.height;
+		this.height = CARD_WIDTH / d.width * d.height;
 	}
 
 	Cell.prototype.position = function(x, y) {
@@ -75,32 +82,26 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	}
 
 	Cell.prototype.column = function() {
-		return this.x % (CARD_WIDTH + GUTTER);
+		return Math.floor(this.x / (CARD_WIDTH + GUTTER));
 	};
 
 	function _getColumnHeight(col) {
 		return _.reduce(_.filter(this.cells, function(cell) {
-			return cell.column = col;
+			return cell.column() == col;
 		}), function(height, cell) {
-			return Math.max(cell.y + cell.height, height);
+			return Math.max(cell.bottom(), height);
 		}, 0);
 	}
 
 	function _getMinHeightColumn() {
-		var col = 0;
-		var height = _getColumnHeight.call(this, col);
-		for (var i = 1; i < OOLS; i++) {
-			var _height = getHeight(i);
-			if (height < _height) {
-				height = _height;
-				col = i;
-			}
-		}
-
-		return {
-			index: col,
-			height: _height;
-		};
+		return _.reduce(_.map(_.range(COLUMNS), function(col) {
+			return {
+				height: _getColumnHeight.call(this, col),
+				index: col
+			};
+		}, this), function(current, column) {
+			return current.height <= column.height ? current : column;
+		});
 	}
 
 	function _isFullfilled() {
@@ -116,9 +117,11 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		this.cells = [];
 		this.visibleCells = [];
 		this.cellViews = [];
+		this.loader = new CellLoader();
+		_ensureCellViews.call(this);
 
-		window.onscroll = _.bind(this.ensureViews, this);
-		window.onresize = _.bind(this.ensureViews, this);
+		window.onscroll = _.bind(_ensureCellViews, this);
+		window.onresize = _.bind(_ensureCellViews, this);
 	}
 
 	function _getVisibleCellsOfColumn(col) {
@@ -127,16 +130,20 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		});
 	}
 
+	function _lowerCell(current, cell) {
+		return (current != null && current.y < cell.y) ? current : cell;
+	}
+
+	function _higherCell(current, cell) {
+		return (current != null && current.y > cell.y) ? current : cell;
+	}
+
 	function _getFirstVisibleCellOfColumn(col) {
-		return _.reduce(_getVisibleCellsOfColumn.call(this, col), function(memo, cell) {
-			return memo.y < cell.y ? memo : cell;
-		});
+		return _.reduce(_getVisibleCellsOfColumn.call(this, col), _lowerCell, null);
 	}
 
 	function _getLastVisibleCellOfColumn(col) {
-		return _.reduce(_getVisibleCellsOfColumn.call(this, col), function(memo, cell) {
-			return memo.y > cell.y ? memo : cell;
-		});
+		return _.reduce(_getVisibleCellsOfColumn.call(this, col), _higherCell, null);
 	}
 
 	function _getCellsOfColumn(col) {
@@ -146,9 +153,7 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	}
 
 	function _getLastCellOfColumn(col) {
-		return _.reduce(_getLastCellOfColumn.call(this, col), function(memo, cell) {
-			return memo.y > cell.y ? memo : cell;
-		});
+		return _.reduce(_getCellsOfColumn.call(this, col), _higherCell, null);
 	}
 
 	function _addVisibleCell(cell) {
@@ -170,29 +175,24 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	}
 
 	function _needLoadMoreCells() {
-		for (var i = 0; i < COLUMNS; i++) {
-			var cell = _getLastVisibleCellOfColumn.call(this, i);
-			if (cell.bottom() === this.el.scrollHeight) {
-				return true;
-			}
-		}
-
-		return false;
+		var range = this._getFrameRange(this);
+		return _.some(_.range(COLUMNS), function(col) {
+			var cell = _getLastCellOfColumn.call(this, col);
+			return cell === null || cell.bottom() <= range.bottom;
+		}, this);
 	}
 
-	function _addCells = function(images) {
-		var self = this;
-		var cells = _.map(images, function(img) {
+	function _addCells(images) {
+		_.each(images, function(img) {
 			var cell = new Cell(img);
-
-			var col = _getMinHeightColumn.call(self);
-			var x = col * (CARD_WIDTH + GUTTER);
-			var y = _getLastCellOfColumn(col).bottom() + GUTTER;
+			var col = _getMinHeightColumn.call(this);
+			var x = col.index * (CARD_WIDTH + GUTTER);
+			var y = col.height === 0 ? 0 : col.height + GUTTER;
 			cell.position(x, y);
+			this.cells.push(cell);
+		}, this);
 
-			return cell;
-		});
-		this.cells = this.cells.concat(cells);
+		_ensureCellViews.call(this);
 	};
 
 	ViewPort.prototype._getFrameRange = function() {
@@ -210,7 +210,7 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 
 		var top = _.reduce(_.map(this.visibleCells, function(cell) {
 			return cell.y;
-		}), Math.max, 0) + 1;
+		}), Math.max, 0);
 
 		return {
 			top: top,
@@ -218,20 +218,24 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		};
 	};
 
-	ViewPort.prototype.ensureCellViews = function() {
+	function _ensureCellViews() {
 		if (_isFullfilled.call(this)) {
 			return;
 		}
 
 		var cellsRange = this._getVisibleCellsRange();
 		var frameRange = this._getFrameRange();
-		if (cellsRange.top > frame.top) {
+		console.log("cells range", cellsRange);
+
+		if (cellsRange.top >= frameRange.top) {
 			_.each(_.range(COLUMNS), function(col) {
 				var cells = _getCellsOfColumn.call(this, col);
-				var cell = _getFirstVisibleCellOfColumn.call(this, col);
-				var pos = _.indexOf(cells, cell);
-				while (pos >= 0 && cells[pos].y > frame.top) {
-					_addVisibleCell.call(this, cells[--pos])
+				if (cells.length !== 0) {
+					var cell = _getFirstVisibleCellOfColumn.call(this, col);
+					var pos = _.indexOf(cells, cell);
+					while (pos >= 0 && cells[pos].y > frameRange.top) {
+						_addVisibleCell.call(this, cells[--pos])
+					}
 				}
 			});
 		} else {
@@ -240,14 +244,13 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 				var cell = _getFirstVisibleCellOfColumn.call(this, col);
 				var index = _.indexOf(cells, cell);
 				var pos = index;
-				while (cells[pos].bottom() <= frame.top) {
-					_remoteVisibleCell.call(this, cells[pos++]);
+				while (cells[pos].bottom() <= frameRange.top) {
+					_removeVisibleCell.call(this, cells[pos++]);
 				}
-			});
+			}, this);
 		}
 
-		// TODO
-		if (cellsRange.bottom <= frame.bottom) {
+		if (cellsRange.bottom <= frameRange.bottom) {
 			if (_needLoadMoreCells.call(this)) {
 				if (this.loader.isLoading()) {
 					this.loader.cancel();
@@ -258,11 +261,11 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 				_.each(_.range(COLUMNS), function(col) {
 					var cells = _getCellsOfColumn.call(this, col);
 					var cell = _getLastVisibleCellOfColumn.call(this, col);
-					var pos = _.indexOf(cells, cell);
-					while (cells[pos].bottom() <= frame.bottom) {
-						_removeVisibleCell.call(this, cells[++pos]);
+					var pos = cell === null ? 0 : _.indexOf(cells, cell) + 1;
+					while (cells[pos].bottom() <= frameRange.bottom) {
+						_addVisibleCell.call(this, cells[pos++]);
 					}
-				});
+				}, this);
 			}
 		} else {
 			_.each(_.range(COLUMNS), function(col) {
@@ -270,12 +273,12 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 				var cell = _getLastVisibleCellOfColumn.call(this, col);
 				var index = _.indexOf(cells, cell);
 				var pos = index;
-				while (cells[pos].y > frame.bottom) {
-					_remoteVisibleCell.call(this, cells[pos--]);
+				while (cells[pos].y > frameRange.bottom) {
+					_removeVisibleCell.call(this, cells[pos--]);
 				}
-			});
+			}, this);
 		}
-	};
+	}
 
 	return ViewPort;
 });

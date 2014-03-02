@@ -3,6 +3,7 @@
 var fs = require("fs");
 var express = require("express");
 var colors = require("colors");
+var _ = require("underscore");
 var argv = require("optimist").argv;
 var images = null;
 
@@ -10,6 +11,7 @@ var app = express();
 app.use(express.bodyParser());
 app.use(express.static(__dirname + "/public"));
 app.use("/lib", express.static(__dirname + "/bower_components"));
+app.use("/static/images", express.static(__dirname + "/images"));
 
 function ensureData(cb) {
 	if (!images) {
@@ -20,8 +22,10 @@ function ensureData(cb) {
 			}
 
 			images = JSON.parse(content);
+			_.each(images, function(img) {
+				img.path = "/static/" + img.path;
+			});
 			cb(images);
-
 		});
 	} else {
 		process.nextTick(function() {

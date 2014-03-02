@@ -45,7 +45,7 @@ _fetchImages = function(images) {
 				results[index] = {
 					id: index,
 					path: dest,
-					dimensions: sizeOf(dest)
+					dimension: sizeOf(dest)
 				};
 				complete();
 			}
