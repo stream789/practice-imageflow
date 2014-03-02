@@ -193,12 +193,8 @@ body {
 .wrapper .cells .cell {
   background: #fff;
   width: 180px;
-  margin-left: 15px;
   position: absolute;
   box-sizing: border-box;
-}
-.wrapper .cells .cell.left {
-  margin-left: 0px;
 }
 .wrapper .cells .cell .img {
   display: block;

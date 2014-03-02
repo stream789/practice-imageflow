@@ -2,6 +2,7 @@
 
 var fs = require("fs");
 var request = require("request");
+var easyimg = require("easyimage");
 var _ = require("underscore");
 var async = require("async");
 var colors = require("colors");
@@ -23,31 +24,51 @@ _fetchImages = function(images) {
 
 	var count = 0;
 	var results = [];
-	async.eachLimit(images, 5, function(img, callback) {
+	async.eachSeries(images, function(img, callback) {
 			var index = count++;
 			var dest = "images/image" + index;
+			var thumb = "thumbnail/thumb" + index;
+			var desc = img.desc;
 
 			function complete() {
 				onResultsChanged();
 				setTimeout(function() {
 					callback(null);
-				}, 1000);
+				}, 500);
 			}
 
 			function fail() {
-				//console.log("#" + index, "fail");
 				results[index] = null;
 				complete();
 			}
 
 			function success() {
-				//console.log("#" + index, "success");
-				results[index] = {
-					id: index,
-					path: dest,
-					dimension: sizeOf(dest)
-				};
-				complete();
+				var dimension = sizeOf(dest);
+				var thumbWidth = 180;
+				var thumbHeight = thumbWidth / dimension.width * dimension.height;
+				easyimg.resize({
+					src: dest,
+					dst: thumb,
+					width: thumbWidth,
+					height: thumbHeight
+				}, function(err) {
+					if (err) {
+						console.error(err);
+						return fail();
+					}
+
+					results[index] = {
+						id: index,
+						path: dest,
+						thumbnail: thumb,
+						desc: desc,
+						thumbWidth: thumbWidth,
+						thumbHeight: thumbHeight,
+						width: dimension.width,
+						height: dimension.height
+					};
+					complete();
+				});
 			}
 
 			request({
@@ -57,6 +78,12 @@ _fetchImages = function(images) {
 				}
 			}).pipe(fs.createWriteStream(dest))
 				.on('error', fail)
+				.on('unpipe', function() {
+					console.log("unpipe!!!");
+				})
+				.on("pipe", function() {
+					console.log("pipe");
+				})
 				.on('finish', success);
 		},
 		function(err) {

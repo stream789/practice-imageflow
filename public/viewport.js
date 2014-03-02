@@ -52,23 +52,19 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 		var el = this.el = $(CellView.template({
 			width: CARD_WIDTH,
 			height: this.cell.height,
-			link: this.cell.image.path
+			link: this.cell.image.thumburl
 		}))[0];
 		this.$el = $(el);
 		this.$el.css("left", this.cell.x + "px");
 		this.$el.css("top", this.cell.y + "px");
 		this.$el.css("width", this.cell.width + "px");
 		this.$el.css("height", this.cell.height + "px");
-		if (this.cell.column() === 0) {
-			this.$el.addClass("left");
-		}
 		return el;
 	};
 
 	function Cell(image) {
 		this.image = image;
-		var d = image.dimension;
-		this.height = CARD_WIDTH / d.width * d.height;
+		this.height = CARD_WIDTH / image.thumbWidth * image.thumbHeight;
 	}
 
 	Cell.prototype.position = function(x, y) {
@@ -164,7 +160,6 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	}
 
 	function _showCell(cell) {
-		console.log("show cell", cell.image.id);
 		if (~_.indexOf(this.shownCells, cell)) {
 			return;
 		}
@@ -177,7 +172,6 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 	}
 
 	function _hideCell(cell) {
-		console.log("hide cell", cell.image.id);
 		this.shownCells = _.without(this.shownCells, cell);
 		var view = _.find(this.cellViews, function(view) {
 			return view.cell === cell;
@@ -201,6 +195,7 @@ define(["jquery", "underscore", "api"], function($, _, api) {
 			return c1.bottom() > c2.bottom() ? c1 : c2;
 		});
 		this.$el.css("height", highestCell.bottom() + "px");
+		console.log("hold", this.cells.length, "cells");
 		_ensureCellViews.call(this);
 	}
 
