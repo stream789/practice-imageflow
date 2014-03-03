@@ -1,0 +1,24 @@
+{
+  "name": "imageflow",
+  "main": "index.js",
+  "version": "0.0.0",
+  "homepage": "https://github.com/limijiaoyin/imageflow",
+  "authors": [
+    "Jarvys <yuhan534@126.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "backbone": "~1.1.2",
+    "bootstrap": "~3.1.1",
+    "requirejs": "~2.1.11",
+    "jquery": "~2.1.0",
+    "underscore": "~1.6.0"
+  }
+}
