@@ -1,8 +1,8 @@
 node_modules
 bower_components
 
-#face data files
-images.json
-data.json
-images
-thumbnail
+#fake data and files
+#images.json
+#data.json
+#images
+#thumbnail
