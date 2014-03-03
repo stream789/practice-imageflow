@@ -10,7 +10,8 @@ Just a web developer's practise for limijiaoyin.
 ##deploy 
 
 ```bash
-npm install
+npm install -g bower #install bower
+npm install #install nodejs modules
 bower install
 ./index.js -p PORT #default port 5000
 ```
