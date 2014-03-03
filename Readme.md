@@ -3,11 +3,11 @@ imageflow
 
 Just a web developer's practise for limijiaoyin.
 
-#dependencies
+##dependencies
 
 * nodejs
 
-#deploy 
+##deploy 
 
 ```bash
 npm install
