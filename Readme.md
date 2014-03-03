@@ -12,5 +12,5 @@ Just a web developer's practise for limijiaoyin.
 ```bash
 npm install
 bower install
-./index.js PORT #default port 5000
+./index.js -p PORT #default port 5000
 ```
