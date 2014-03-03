@@ -1,7 +1,7 @@
 imageflow
 =========
 
-Just a web developer's practise for limijiaoyin.
+Just a web developer's practice for limijiaoyin.
 
 ##dependencies
 
