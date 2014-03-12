@@ -1,0 +1,38 @@
+.cells{
+ width:284px; 
+ height:174px;
+ //默认图片 
+ background:url(../images/loading.gif) center no-repeat;
+ //圆角
+ -moz-border-radius:8px;/*8px是圆角的角度，值越大则圆角效果越明显*/
+ -webkit-border-radius:8px;
+ border-radius: 8px;
+ //阴影
+ -moz-box-shadow: 1px 1px 10px #00f;
+ -webkit-box-shadow: 1px 1px 10px #00f;
+ box-shadow: 1px 1px 10px #00f;
+}
+
+
+.cells img{
+
+ opacity: 0.8;
+ 
+ -webkit-transition: all 0.5s ease;  
+ -moz-transition: all 0.5s ease;  
+ -o-transition: all 0.5s ease;  
+    
+ -webkit-box-reflect: below 0px -webkit-gradient(linear, left top, left bottom, from(transparent), color-stop(.7, transparent), to(rgba(0,0,0,0.1)));  
+}
+
+.cells img:hover{
+
+ opacity: 1;
+
+ -webkit-box-reflect: below 0px -webkit-gradient(linear, left top, left bottom,  from(transparent), color-stop(.7, transparent), to(rgba(0,0,0,0.4)));
+
+ -webkit-box-shadow: 0px 0px 20px rgba(255,255,255,0.8);  
+ -moz-box-shadow: 0px 0px 20px rgba(255,255,255,0.8);  
+ box-shadow: 0px 0px 20px rgba(255,255,255,0.8);  
+}  
+
